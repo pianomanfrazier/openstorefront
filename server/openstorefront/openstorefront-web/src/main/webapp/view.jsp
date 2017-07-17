@@ -438,9 +438,12 @@
 										listeners:{
 											specialkey: function(field, e) {
 												var value = this.getValue();
-												if (e.getKey() === e.ENTER && !Ext.isEmpty(value)) {
-													actionAddTag(value);
-												}	
+
+												checkDuplicateTag(componentId, value, function () {
+													if (e.getKey() === e.ENTER && !Ext.isEmpty(value)) {
+														actionAddTag(value);
+													}	
+												})
 											}
 										}
 									}),
@@ -452,9 +455,14 @@
 										minWidth: 75,
 										handler: function(){
 											var tagField = Ext.getCmp('tagField');
-											if (tagField.isValid()) {
-												actionAddTag(tagField.getValue());
-											}
+											var value = tagField.getValue();
+
+											checkDuplicateTag(componentId, value, function () {
+												if (tagField.isValid()) {
+													actionAddTag(tagField.getValue());
+												}
+											});
+
 										}
 									}
 								]
@@ -500,6 +508,29 @@
 						}
 					});	
 				}
+			};
+
+			var checkDuplicateTag = function (comonentId, tagName, cb) {
+				Ext.Ajax.request({
+					url: 'api/v1/resource/components/' + componentId + '/tags',
+					method: 'GET',
+					success: function(response, opt){
+						var response = Ext.decode(response.responseText);
+						var tagVerified = true;
+						for (var ii = 0; ii < response.length; ii += 1) {
+							if (typeof response[ii].text !== 'undefined' && response[ii].text.toLowerCase() === tagName.toLowerCase()) {
+								tagVerified = false;
+								break;
+							}
+						}
+						if (tagVerified) {
+							cb();
+						}
+						else {
+							Ext.getCmp('tagField').clearValue();
+						}
+					}
+				});	
 			};
 			
 			var detailPanel = Ext.create('Ext.panel.Panel', {
